@@ -8,6 +8,7 @@ before_script:
   pip install 'travis-cargo<0.2' --user &&
   ln -s /bin/date $HOME/.local/bin/date &&
   ln -s /bin/uname $HOME/.local/bin/uname &&
+  ln -s /bin/cargo $HOME/.local/bin/cargo &&
   ln -s /bin/rustdoc $HOME/.local/bin/rustdoc &&
   ln -s /bin/rustc $HOME/.local/bin/real_rustc &&
   export PATH=$HOME/.local/bin
