@@ -42,6 +42,7 @@ extern crate semver;
 use semver::{Version, VersionReq, Identifier};
 use std::process::Command;
 use std::env;
+use std::ffi::OsString;
 
 /// Release channel of the compiler.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -78,7 +79,7 @@ pub fn version() -> Version {
 /// Returns the `rustc` SemVer version and additional metadata
 /// like the git short hash and build date.
 pub fn version_meta() -> VersionMeta {
-    let cmd = env::var("RUSTC").unwrap_or("rustc".into());
+    let cmd = env::var_os("RUSTC").unwrap_or_else(|| OsString::from("rustc"));
 
     let out = Command::new(&cmd)
         .arg("--version")
