@@ -12,6 +12,7 @@ before_script:
   ln -s $HOME/rust/bin/cargo $HOME/.local/bin/cargo &&
   ln -s $HOME/rust/bin/rustdoc $HOME/.local/bin/rustdoc &&
   ln -s $HOME/rust/bin/rustc $HOME/.local/bin/real_rustc &&
+  echo $PATH &&
   export PATH=$HOME/.local/bin &&
   export RUSTC=real_rustc
 script:
