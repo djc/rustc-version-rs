@@ -27,9 +27,31 @@ git = "https://github.com/Kimundi/rustc-version-rs"
 # Example
 
 ```rust
+// This could be a cargo build script
+
 extern crate rustc_version;
+use rustc_version::{version, version_matches, version_meta, Channel};
 
 fn main() {
+    // Assert we haven't travelled back in time
+    assert!(version().major >= 1);
 
+    // Set cfg flags depending on release channel
+    match version_meta().channel {
+        Channel::Stable => {
+            println!("cargo:rustc-cfg=RUSTC_IS_STABLE");
+        }
+        Channel::Beta => {
+            println!("cargo:rustc-cfg=RUSTC_IS_BETA");
+        }
+        Channel::Nightly => {
+            println!("cargo:rustc-cfg=RUSTC_IS_NIGHTLY");
+        }
+    }
+
+    // Directly check a semver version requirment
+    if version_matches(">= 1.4.0") {
+        println!("cargo:rustc-cfg=compiler_has_important_bugfix");
+    }
 }
 ```
