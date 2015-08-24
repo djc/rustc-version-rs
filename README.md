@@ -47,6 +47,9 @@ fn main() {
         Channel::Nightly => {
             println!("cargo:rustc-cfg=RUSTC_IS_NIGHTLY");
         }
+        Channel::Dev => {
+            println!("cargo:rustc-cfg=RUSTC_IS_DEV");
+        }
     }
 
     // Directly check a semver version requirment

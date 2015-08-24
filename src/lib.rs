@@ -29,6 +29,9 @@
 //!         Channel::Nightly => {
 //!             println!("cargo:rustc-cfg=RUSTC_IS_NIGHTLY");
 //!         }
+//!         Channel::Dev => {
+//!             println!("cargo:rustc-cfg=RUSTC_IS_DEV");
+//!         }
 //!     }
 //!
 //!     // Directly check a semver version requirment
@@ -47,6 +50,8 @@ use std::ffi::OsString;
 /// Release channel of the compiler.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Channel {
+    /// Development release channel
+    Dev,
     /// Nightly release channel
     Nightly,
     /// Beta release channel
@@ -107,6 +112,8 @@ pub fn version_meta() -> VersionMeta {
         Channel::Stable
     } else {
         match version.pre[0] {
+            Identifier::AlphaNumeric(ref s)
+                if s == "dev" => Channel::Dev,
             Identifier::AlphaNumeric(ref s)
                 if s == "beta" => Channel::Beta,
             Identifier::AlphaNumeric(ref s)
