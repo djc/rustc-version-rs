@@ -98,6 +98,7 @@ pub fn version_meta() -> VersionMeta {
         .unwrap_or_else(|e| { panic!("failed to execute `RUSTC -vV`: {}", e) });
 
     let out = String::from_utf8(out.stdout)
+        .ok()
         .expect("non utf8 output from RUSTC -vV");
 
     version_meta_for(&out)
