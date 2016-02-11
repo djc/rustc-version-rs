@@ -77,8 +77,11 @@ pub struct VersionMeta {
     /// Git short hash of the build of the compiler
     pub commit_hash: Option<String>,
 
-    /// Build date of the compiler
+    /// Commit date of the compiler
     pub commit_date: Option<String>,
+
+    /// Build date of the compiler; this was removed between Rust 1.0.0 and 1.1.0.
+    pub build_date: Option<String>,
 
     /// Release channel of the compiler
     pub channel: Channel,
@@ -120,7 +123,7 @@ pub fn version_meta_for(verbose_version_string: &str) -> VersionMeta {
 
     const ERR_MSG: &'static str = "unexpected -vV format";
 
-    assert!(out.len() == 6, ERR_MSG);
+    assert!(out.len() == 6 || out.len() == 7, ERR_MSG);
 
     let short_version_string = out[0];
 
@@ -139,8 +142,21 @@ pub fn version_meta_for(verbose_version_string: &str) -> VersionMeta {
         hash => Some(hash.to_owned()),
     };
 
-    let host = expect_prefix(out[4], "host: ");
-    let release = expect_prefix(out[5], "release: ");
+    // Handle that the build date may or may not be present.
+    let mut idx = 4;
+    let mut build_date = None;
+    if out[idx].starts_with("build-date") {
+        build_date = match expect_prefix(out[idx], "build-date: ") {
+            "unknown" => None,
+            s => Some(s.to_owned()),
+        };
+        idx = idx + 1;
+    }
+
+
+    let host = expect_prefix(out[idx], "host: ");
+    idx = idx +1;
+    let release = expect_prefix(out[idx], "release: ");
 
     let semver = Version::parse(release).unwrap();
 
@@ -162,6 +178,7 @@ pub fn version_meta_for(verbose_version_string: &str) -> VersionMeta {
         semver: semver,
         commit_hash: commit_hash,
         commit_date: commit_date,
+        build_date: build_date,
         channel: channel,
         host: host.into(),
         short_version_string: short_version_string.into(),
@@ -178,14 +195,47 @@ pub fn version_matches(req: &str) -> bool {
 fn smoketest() {
     let v = version();
     assert!(v.major >= 1);
-    assert!(v.minor >= 2);
 
     let v = version_meta();
     assert!(v.semver.major >= 1);
-    assert!(v.semver.minor >= 2);
 
-    assert!(version_matches(">= 1.2.0"));
+    assert!(version_matches(">= 1.0.0"));
 }
+
+#[test]
+#[should_panic(expected = "unexpected")]
+// Characterization test for behavior on an unexpected key.
+fn parse_unexpected() {
+    version_meta_for(
+"rustc 1.0.0 (a59de37e9 2015-05-13) (built 2015-05-14)
+binary: rustc
+commit-hash: a59de37e99060162a2674e3ff45409ac73595c0e
+commit-date: 2015-05-13
+rust-birthday: 2015-05-14
+host: x86_64-unknown-linux-gnu
+release: 1.0.0");
+}
+
+#[test]
+fn parse_1_0_0() {
+    let version = version_meta_for(
+"rustc 1.0.0 (a59de37e9 2015-05-13) (built 2015-05-14)
+binary: rustc
+commit-hash: a59de37e99060162a2674e3ff45409ac73595c0e
+commit-date: 2015-05-13
+build-date: 2015-05-14
+host: x86_64-unknown-linux-gnu
+release: 1.0.0");
+
+    assert_eq!(version.semver, Version::parse("1.0.0").unwrap());
+    assert_eq!(version.commit_hash, Some("a59de37e99060162a2674e3ff45409ac73595c0e".into()));
+    assert_eq!(version.commit_date, Some("2015-05-13".into()));
+    assert_eq!(version.build_date, Some("2015-05-14".into()));
+    assert_eq!(version.channel, Channel::Stable);
+    assert_eq!(version.host, "x86_64-unknown-linux-gnu");
+    assert_eq!(version.short_version_string, "rustc 1.0.0 (a59de37e9 2015-05-13) (built 2015-05-14)");
+}
+
 
 #[test]
 fn parse_unknown() {
