@@ -100,6 +100,21 @@ pub struct VersionMeta {
     pub short_version_string: String,
 }
 
+impl VersionMeta {
+    /// Returns the version metadata for `cmd`, which should be a `rustc` command.
+    pub fn for_command(cmd: Command) -> Result<VersionMeta> {
+        let mut cmd = cmd;
+
+        let out = match cmd.arg("-vV").output() {
+            Err(e) => return Err(Error::CouldNotExecuteCommand(e)),
+            Ok(out) => out,
+        };
+        let out = try!(str::from_utf8(&out.stdout));
+
+        version_meta_for(out)
+    }
+}
+
 /// Returns the `rustc` SemVer version.
 pub fn version() -> Result<Version> {
     Ok(try!(version_meta()).semver)
@@ -110,14 +125,8 @@ pub fn version() -> Result<Version> {
 pub fn version_meta() -> Result<VersionMeta> {
     let cmd = env::var_os("RUSTC").unwrap_or_else(|| OsString::from("rustc"));
 
-    let out = match Command::new(&cmd).arg("-vV").output() {
-        Err(e) => return Err(Error::CouldNotExecuteCommand(e)),
-        Ok(out) => out,
-    };
+    VersionMeta::for_command(Command::new(cmd))
 
-    let out = try!(str::from_utf8(&out.stdout));
-
-    version_meta_for(out)
 }
 
 /// Parses a "rustc -vV" output string and returns
