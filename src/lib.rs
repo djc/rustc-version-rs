@@ -157,9 +157,8 @@ pub fn version_meta_for(verbose_version_string: &str) -> VersionMeta {
         idx = idx + 1;
     }
 
-
     let host = expect_prefix(out[idx], "host: ");
-    idx = idx +1;
+    idx = idx + 1;
     let release = expect_prefix(out[idx], "release: ");
 
     let semver = Version::parse(release).unwrap();
