@@ -12,4 +12,4 @@ repository = "https://github.com/Kimundi/rustc-version-rs"
 keywords = ["version", "rustc"]
 
 [dependencies]
-semver = "0.1"
+semver = "0.2.3"
