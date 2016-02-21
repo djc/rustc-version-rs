@@ -20,7 +20,7 @@
 //! // This could be a cargo build script
 //!
 //! extern crate rustc_version;
-//! use rustc_version::{version, version_matches, version_meta, Channel};
+//! use rustc_version::{version, version_meta, Channel, Version};
 //!
 //! fn main() {
 //!     // Assert we haven't travelled back in time
@@ -42,18 +42,22 @@
 //!         }
 //!     }
 //!
-//!     // Directly check a semver version requirment
-//!     if version_matches(">= 1.4.0") {
+//!     // Check for a minimum version
+//!     if version() >= Version::parse("1.4.0").unwrap() {
 //!         println!("cargo:rustc-cfg=compiler_has_important_bugfix");
 //!     }
 //! }
 //! ```
 
 extern crate semver;
-use semver::{Version, VersionReq, Identifier};
+use semver::Identifier;
 use std::process::Command;
 use std::env;
 use std::ffi::OsString;
+
+// Convenience re-export to allow version comparison without needing to add
+// semver crate.
+pub use semver::Version;
 
 /// Release channel of the compiler.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
@@ -185,12 +189,6 @@ pub fn version_meta_for(verbose_version_string: &str) -> VersionMeta {
     }
 }
 
-/// Check wether the `rustc` version matches the given SemVer
-/// version requirement.
-pub fn version_matches(req: &str) -> bool {
-    VersionReq::parse(req).unwrap().matches(&version())
-}
-
 #[test]
 fn smoketest() {
     let v = version();
@@ -199,7 +197,7 @@ fn smoketest() {
     let v = version_meta();
     assert!(v.semver.major >= 1);
 
-    assert!(version_matches(">= 1.0.0"));
+    assert!(version() >= Version::parse("1.0.0").unwrap());
 }
 
 #[test]
