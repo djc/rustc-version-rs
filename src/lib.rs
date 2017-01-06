@@ -123,7 +123,7 @@ pub fn version_meta_for(verbose_version_string: &str) -> VersionMeta {
 
     const ERR_MSG: &'static str = "unexpected -vV format";
 
-    assert!(out.len() == 6 || out.len() == 7, ERR_MSG);
+    assert!(out.len() >= 6 && out.len() <= 8, ERR_MSG);
 
     let short_version_string = out[0];
 
@@ -289,4 +289,23 @@ release: 1.3.0");
     assert_eq!(version.channel, Channel::Stable);
     assert_eq!(version.host, "x86_64-unknown-linux-gnu");
     assert_eq!(version.short_version_string, "rustc 1.3.0 (9a92aaf19 2015-09-15)");
+}
+
+#[test]
+fn parse_1_16_0_nightly() {
+    let version = version_meta_for(
+"rustc 1.16.0-nightly (5d994d8b7 2017-01-05)
+binary: rustc
+commit-hash: 5d994d8b7e482e87467d4a521911477bd8284ce3
+commit-date: 2017-01-05
+host: x86_64-unknown-linux-gnu
+release: 1.16.0-nightly
+LLVM version: 3.9");
+
+    assert_eq!(version.semver, Version::parse("1.16.0-nightly").unwrap());
+    assert_eq!(version.commit_hash, Some("5d994d8b7e482e87467d4a521911477bd8284ce3".into()));
+    assert_eq!(version.commit_date, Some("2017-01-05".into()));
+    assert_eq!(version.channel, Channel::Nightly);
+    assert_eq!(version.host, "x86_64-unknown-linux-gnu");
+    assert_eq!(version.short_version_string, "rustc 1.16.0-nightly (5d994d8b7 2017-01-05)");
 }
