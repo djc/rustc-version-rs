@@ -1,6 +1,6 @@
 [package]
 name = "rustc_version"
-version = "0.1.7"
+version = "0.1.8"
 authors = ["Marvin Löbel <loebel.marvin@gmail.com>"]
 license = "MIT OR Apache-2.0"
 
@@ -12,4 +12,4 @@ repository = "https://github.com/Kimundi/rustc-version-rs"
 keywords = ["version", "rustc"]
 
 [dependencies]
-semver = "0.1"
+semver = "0.2"
