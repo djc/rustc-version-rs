@@ -1,6 +1,6 @@
 [package]
 name = "rustc_version"
-version = "0.1.7"
+version = "0.2.0"
 authors = ["Marvin Löbel <loebel.marvin@gmail.com>"]
 license = "MIT OR Apache-2.0"
 
