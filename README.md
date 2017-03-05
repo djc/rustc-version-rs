@@ -30,7 +30,7 @@ git = "https://github.com/Kimundi/rustc-version-rs"
 // This could be a cargo build script
 
 extern crate rustc_version;
-use rustc_version::{version, version_matches, version_meta, Channel};
+use rustc_version::{version, version_meta, Channel, Version};
 
 fn main() {
     // Assert we haven't travelled back in time
@@ -52,8 +52,8 @@ fn main() {
         }
     }
 
-    // Directly check a semver version requirment
-    if version_matches(">= 1.4.0") {
+    // Check for a minimum version
+    if version() >= Version::parse("1.4.0").unwrap() {
         println!("cargo:rustc-cfg=compiler_has_important_bugfix");
     }
 }
