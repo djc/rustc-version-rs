@@ -11,7 +11,10 @@
 //! Simple library for getting the version information of a `rustc`
 //! compiler.
 //!
-//! This calls `$RUSTC --version` and parses the output, falling
+//! This can be used by build scripts or other tools dealing with Rust sources
+//! to make decisions based on the version of the compiler.
+//!
+//! It calls `$RUSTC --version -v` and parses the output, falling
 //! back to `rustc` if `$RUSTC` is not set.
 //!
 //! # Example
