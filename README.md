@@ -1,32 +1,30 @@
 rustc-version-rs
 ==============
 
+A library for querying the version of a `rustc` compiler.
+
+This can be used by build scripts or other tools dealing with Rust sources
+to make decisions based on the version of the compiler.
+
 [![Travis-CI Status](https://travis-ci.org/Kimundi/rustc-version-rs.png?branch=master)](https://travis-ci.org/Kimundi/rustc-version-rs)
-
-A library for querying the version of a installed rustc compiler.
-
-For more details, see the [docs](http://kimundi.github.io/rustc-version-rs/rustc_version/index.html).
 
 # Getting Started
 
 [rustc-version-rs is available on crates.io](https://crates.io/crates/rustc_version).
-Add the following dependency to your Cargo manifest to get the latest version of the 0.1 branch:
+It is recommended to look there for the newest released version, as well as links to the newest builds of the docs.
+
+At the point of the last update of this README, the latest published version could be used like this:
+
+Add the following dependency to your Cargo manifest...
+
 ```toml
 [dependencies]
-
-rustc_version = "0.1.*"
+rustc_version = "0.2"
 ```
 
-To always get the latest version, add this git repository to your
-Cargo manifest:
+...and see the [docs](http://kimundi.github.io/rustc-version-rs/rustc_version/index.html) for how to use it.
 
-```toml
-[dependencies.rustc_version]
-git = "https://github.com/Kimundi/rustc-version-rs"
-```
 # Example
-
-(This uses the version at `master`, and may differ from the most recently released version.)
 
 ```rust
 // This could be a cargo build script
