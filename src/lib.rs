@@ -135,7 +135,7 @@ pub fn version_meta() -> Result<VersionMeta> {
 pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
     let out: Vec<_> = verbose_version_string.lines().collect();
 
-    if (out.len() >= 6 && out.len() <= 8) {
+    if !(out.len() >= 6 && out.len() <= 8) {
         return Err(Error::UnexpectedVersionFormat);
     }
 
@@ -313,7 +313,7 @@ commit-hash: 5d994d8b7e482e87467d4a521911477bd8284ce3
 commit-date: 2017-01-05
 host: x86_64-unknown-linux-gnu
 release: 1.16.0-nightly
-LLVM version: 3.9");
+LLVM version: 3.9").unwrap();
 
     assert_eq!(version.semver, Version::parse("1.16.0-nightly").unwrap());
     assert_eq!(version.commit_hash, Some("5d994d8b7e482e87467d4a521911477bd8284ce3".into()));
