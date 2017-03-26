@@ -6,15 +6,11 @@ rust:
 before_script:
 - |
   pip install 'travis-cargo<0.2' --user &&
-  ln -s /bin/false $HOME/.local/bin/rustc &&
-  ln -s $HOME/rust/bin/rustc $HOME/.local/bin/real_rustc &&
   export PATH=$HOME/.local/bin:$PATH &&
-  export RUSTC=real_rustc
 script:
 - |
   travis-cargo build &&
   travis-cargo test &&
-  rustdoc --test README.md -L dependency=./target/debug/deps --extern rustc_version=./target/debug/librustc_version.rlib &&
   travis-cargo bench &&
   travis-cargo --only stable doc
 after_success:

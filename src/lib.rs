@@ -325,3 +325,29 @@ LLVM version: 3.9").unwrap();
     assert_eq!(version.host, "x86_64-unknown-linux-gnu");
     assert_eq!(version.short_version_string, "rustc 1.16.0-nightly (5d994d8b7 2017-01-05)");
 }
+
+/*
+#[test]
+fn version_matches_replacement() {
+    let f = |s1: &str, s2: &str| {
+        let a = Version::parse(s1).unwrap();
+        let b = Version::parse(s2).unwrap();
+        println!("{} <= {} : {}", s1, s2, a <= b);
+    };
+
+    println!();
+
+    f("1.5.0",         "1.5.0");
+    f("1.5.0-nightly", "1.5.0");
+    f("1.5.0",         "1.5.0-nightly");
+    f("1.5.0-nightly", "1.5.0-nightly");
+
+    f("1.5.0",         "1.6.0");
+    f("1.5.0-nightly", "1.6.0");
+    f("1.5.0",         "1.6.0-nightly");
+    f("1.5.0-nightly", "1.6.0-nightly");
+
+    panic!();
+
+}
+*/
