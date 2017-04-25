@@ -112,7 +112,7 @@ impl VersionMeta {
             Err(e) => return Err(Error::CouldNotExecuteCommand(e)),
             Ok(out) => out,
         };
-        let out = try!(str::from_utf8(&out.stdout));
+        let out = str::from_utf8(&out.stdout)?;
 
         version_meta_for(out)
     }
@@ -120,7 +120,7 @@ impl VersionMeta {
 
 /// Returns the `rustc` SemVer version.
 pub fn version() -> Result<Version> {
-    Ok(try!(version_meta()).semver)
+    Ok(version_meta()?.semver)
 }
 
 /// Returns the `rustc` SemVer version and additional metadata
@@ -151,12 +151,12 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
         }
     }
 
-    let commit_hash = match try!(expect_prefix(out[2], "commit-hash: ")) {
+    let commit_hash = match expect_prefix(out[2], "commit-hash: ")? {
         "unknown" => None,
         hash => Some(hash.to_owned()),
     };
 
-    let commit_date = match try!(expect_prefix(out[3], "commit-date: ")) {
+    let commit_date = match expect_prefix(out[3], "commit-date: ")? {
         "unknown" => None,
         hash => Some(hash.to_owned()),
     };
@@ -165,18 +165,18 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
     let mut idx = 4;
     let mut build_date = None;
     if out[idx].starts_with("build-date") {
-        build_date = match try!(expect_prefix(out[idx], "build-date: ")) {
+        build_date = match expect_prefix(out[idx], "build-date: ")? {
             "unknown" => None,
             s => Some(s.to_owned()),
         };
         idx = idx + 1;
     }
 
-    let host = try!(expect_prefix(out[idx], "host: "));
     idx = idx + 1;
-    let release = try!(expect_prefix(out[idx], "release: "));
+    let host = expect_prefix(out[idx], "host: ")?;
+    let release = expect_prefix(out[idx], "release: ")?;
 
-    let semver: Version = try!(release.parse());
+    let semver: Version = release.parse()?;
 
     let channel = if semver.pre.is_empty() {
         Channel::Stable
