@@ -108,10 +108,7 @@ impl VersionMeta {
     pub fn for_command(cmd: Command) -> Result<VersionMeta> {
         let mut cmd = cmd;
 
-        let out = match cmd.arg("-vV").output() {
-            Err(e) => return Err(Error::CouldNotExecuteCommand(e)),
-            Ok(out) => out,
-        };
+        let out = cmd.arg("-vV").output().map_err(Error::CouldNotExecuteCommand)?;
         let out = str::from_utf8(&out.stdout)?;
 
         version_meta_for(out)
@@ -129,7 +126,6 @@ pub fn version_meta() -> Result<VersionMeta> {
     let cmd = env::var_os("RUSTC").unwrap_or_else(|| OsString::from("rustc"));
 
     VersionMeta::for_command(Command::new(cmd))
-
 }
 
 /// Parses a "rustc -vV" output string and returns
@@ -145,9 +141,10 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
     let short_version_string = out[0];
 
     fn expect_prefix<'a>(line: &'a str, prefix: &str) -> Result<&'a str> {
-        match line.starts_with(prefix) {
-            true => Ok(&line[prefix.len()..]),
-            false => Err(Error::UnexpectedVersionFormat),
+        if line.starts_with(prefix) {
+            Ok(&line[prefix.len()..])
+        } else {
+            Err(Error::UnexpectedVersionFormat)
         }
     }
 
@@ -169,11 +166,11 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
             "unknown" => None,
             s => Some(s.to_owned()),
         };
-        idx = idx + 1;
+        idx += 1;
     }
 
-    idx = idx + 1;
     let host = expect_prefix(out[idx], "host: ")?;
+    idx += 1;
     let release = expect_prefix(out[idx], "release: ")?;
 
     let semver: Version = release.parse()?;
@@ -182,12 +179,9 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
         Channel::Stable
     } else {
         match semver.pre[0] {
-            Identifier::AlphaNumeric(ref s)
-                if s == "dev" => Channel::Dev,
-            Identifier::AlphaNumeric(ref s)
-                if s == "beta" => Channel::Beta,
-            Identifier::AlphaNumeric(ref s)
-                if s == "nightly" => Channel::Nightly,
+            Identifier::AlphaNumeric(ref s) if s == "dev" => Channel::Dev,
+            Identifier::AlphaNumeric(ref s) if s == "beta" => Channel::Beta,
+            Identifier::AlphaNumeric(ref s) if s == "nightly" => Channel::Nightly,
             ref x => return Err(Error::UnknownPreReleaseTag(x.clone())),
         }
     };
