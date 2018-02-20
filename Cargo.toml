@@ -11,5 +11,8 @@ documentation = "http://kimundi.github.io/rustc-version-rs/rustc_version/index.h
 repository = "https://github.com/Kimundi/rustc-version-rs"
 keywords = ["version", "rustc"]
 
+[badges]
+travis-ci = { repository = "Kimundi/rustc-version-rs" }
+
 [dependencies]
 semver = "0.9"
