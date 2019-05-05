@@ -52,6 +52,13 @@
 //! }
 //! ```
 
+#[cfg(test)]
+#[macro_use]
+extern crate doc_comment;
+
+#[cfg(test)]
+doctest!("../README.md");
+
 extern crate semver;
 use semver::Identifier;
 use std::process::Command;
