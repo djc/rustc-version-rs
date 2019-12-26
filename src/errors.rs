@@ -21,20 +21,19 @@ use Error::*;
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use std::error::Error;
         match *self {
-            CouldNotExecuteCommand(ref e) => write!(f, "{}: {}", self.description(), e),
-            Utf8Error(_) => write!(f, "{}", self.description()),
-            UnexpectedVersionFormat => write!(f, "{}", self.description()),
-            ReqParseError(ref e) => write!(f, "{}: {}", self.description(), e),
-            SemVerError(ref e) => write!(f, "{}: {}", self.description(), e),
-            UnknownPreReleaseTag(ref i) => write!(f, "{}: {}", self.description(), i),
+            CouldNotExecuteCommand(ref e) => write!(f, "could not execute command: {}", e),
+            Utf8Error(_) => write!(f, "invalid UTF-8 output from `rustc -vV`"),
+            UnexpectedVersionFormat => write!(f, "unexpected `rustc -vV` format"),
+            ReqParseError(ref e) => write!(f, "error parsing version requirement: {}", e),
+            SemVerError(ref e) => write!(f, "error parsing version: {}", e),
+            UnknownPreReleaseTag(ref i) => write!(f, "unknown pre-release tag: {}", i),
         }
     }
 }
 
 impl error::Error for Error {
-    fn cause(&self) -> Option<&error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             CouldNotExecuteCommand(ref e) => Some(e),
             Utf8Error(ref e) => Some(e),
@@ -42,17 +41,6 @@ impl error::Error for Error {
             ReqParseError(ref e) => Some(e),
             SemVerError(ref e) => Some(e),
             UnknownPreReleaseTag(_) => None,
-        }
-    }
-
-    fn description(&self) -> &str {
-        match *self {
-            CouldNotExecuteCommand(_) => "could not execute command",
-            Utf8Error(_) => "invalid UTF-8 output from `rustc -vV`",
-            UnexpectedVersionFormat => "unexpected `rustc -vV` format",
-            ReqParseError(_) => "error parsing version requirement",
-            SemVerError(_) => "error parsing version",
-            UnknownPreReleaseTag(_) => "unknown pre-release tag",
         }
     }
 }
