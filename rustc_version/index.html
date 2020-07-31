@@ -1,0 +1,54 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `rustc_version` crate."><meta name="keywords" content="rust, rustlang, rust-lang, rustc_version"><title>rustc_version - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../dark.css"><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="shortcut icon" href="../favicon.ico"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../rustc_version/index.html'><div class='logo-container'><img src='../rust-logo.png' alt='logo'></div></a><p class='location'>Crate rustc_version</p><div class="sidebar-elems"><a id='all-types' href='all.html'><p>See all rustc_version's items</p></a><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#functions">Functions</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'rustc_version', ty: 'mod', relpath: '../'};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/rustc_version/lib.rs.html#9-328' title='goto source code'>[src]</a></span><span class='in-band'>Crate <a class="mod" href=''>rustc_version</a></span></h1><div class='docblock'><p>Simple library for getting the version information of a <code>rustc</code>
+compiler.</p>
+<p>This can be used by build scripts or other tools dealing with Rust sources
+to make decisions based on the version of the compiler.</p>
+<p>It calls <code>$RUSTC --version -v</code> and parses the output, falling
+back to <code>rustc</code> if <code>$RUSTC</code> is not set.</p>
+<h1 id="example" class="section-header"><a href="#example">Example</a></h1>
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="comment">// This could be a cargo build script</span>
+
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">rustc_version</span>;
+<span class="kw">use</span> <span class="ident">rustc_version</span>::{<span class="ident">version</span>, <span class="ident">version_meta</span>, <span class="ident">Channel</span>, <span class="ident">Version</span>};
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+    <span class="comment">// Assert we haven&#39;t travelled back in time</span>
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">version</span>().<span class="ident">unwrap</span>().<span class="ident">major</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">1</span>);
+
+    <span class="comment">// Set cfg flags depending on release channel</span>
+    <span class="kw">match</span> <span class="ident">version_meta</span>().<span class="ident">unwrap</span>().<span class="ident">channel</span> {
+        <span class="ident">Channel</span>::<span class="ident">Stable</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;cargo:rustc-cfg=RUSTC_IS_STABLE&quot;</span>);
+        }
+        <span class="ident">Channel</span>::<span class="ident">Beta</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;cargo:rustc-cfg=RUSTC_IS_BETA&quot;</span>);
+        }
+        <span class="ident">Channel</span>::<span class="ident">Nightly</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;cargo:rustc-cfg=RUSTC_IS_NIGHTLY&quot;</span>);
+        }
+        <span class="ident">Channel</span>::<span class="ident">Dev</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;cargo:rustc-cfg=RUSTC_IS_DEV&quot;</span>);
+        }
+    }
+
+    <span class="comment">// Check for a minimum version</span>
+    <span class="kw">if</span> <span class="ident">version</span>().<span class="ident">unwrap</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="ident">Version</span>::<span class="ident">parse</span>(<span class="string">&quot;1.4.0&quot;</span>).<span class="ident">unwrap</span>() {
+        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;cargo:rustc-cfg=compiler_has_important_bugfix&quot;</span>);
+    }
+}</pre></div>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table><tr class='module-item'><td><a class="struct" href="struct.Version.html" title='rustc_version::Version struct'>Version</a></td><td class='docblock-short'><p>Represents a version number conforming to the semantic versioning scheme.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.VersionMeta.html" title='rustc_version::VersionMeta struct'>VersionMeta</a></td><td class='docblock-short'><p>Rustc version plus metada like git short hash and build date.</p>
+</td></tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table><tr class='module-item'><td><a class="enum" href="enum.Channel.html" title='rustc_version::Channel enum'>Channel</a></td><td class='docblock-short'><p>Release channel of the compiler.</p>
+</td></tr><tr class='module-item'><td><a class="enum" href="enum.Error.html" title='rustc_version::Error enum'>Error</a></td><td class='docblock-short'><p>The error type for this crate.</p>
+</td></tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table><tr class='module-item'><td><a class="fn" href="fn.version.html" title='rustc_version::version fn'>version</a></td><td class='docblock-short'><p>Returns the <code>rustc</code> SemVer version.</p>
+</td></tr><tr class='module-item'><td><a class="fn" href="fn.version_meta.html" title='rustc_version::version_meta fn'>version_meta</a></td><td class='docblock-short'><p>Returns the <code>rustc</code> SemVer version and additional metadata
+like the git short hash and build date.</p>
+</td></tr><tr class='module-item'><td><a class="fn" href="fn.version_meta_for.html" title='rustc_version::version_meta_for fn'>version_meta_for</a></td><td class='docblock-short'><p>Parses a &quot;rustc -vV&quot; output string and returns
+the SemVer version and additional metadata
+like the git short hash and build date.</p>
+</td></tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table><tr class='module-item'><td><a class="type" href="type.Result.html" title='rustc_version::Result type'>Result</a></td><td class='docblock-short'><p>The result type for this crate.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "rustc_version";</script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
