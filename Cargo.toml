@@ -15,7 +15,7 @@ keywords = ["version", "rustc"]
 travis-ci = { repository = "Kimundi/rustc-version-rs" }
 
 [dependencies]
-semver = "0.10"
+semver = "0.11"
 
 [dev-dependencies]
 doc-comment = "0.3"
