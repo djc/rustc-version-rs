@@ -1,5 +1,5 @@
-use std::{self, error, fmt, io, str};
 use semver::{self, Identifier};
+use std::{self, error, fmt, io, str};
 
 /// The error type for this crate.
 #[derive(Debug)]
