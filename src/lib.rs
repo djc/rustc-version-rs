@@ -63,7 +63,7 @@ extern crate semver;
 use semver::Identifier;
 use std::ffi::OsString;
 use std::process::Command;
-use std::{env, str};
+use std::{env, fmt, str};
 
 // Convenience re-export to allow version comparison without needing to add
 // semver crate.
@@ -83,6 +83,28 @@ pub enum Channel {
     Beta,
     /// Stable release channel
     Stable,
+}
+
+/// LLVM version
+///
+/// LLVM's version numbering scheme is not semvar compatible until version 4.0
+///
+/// rustc [just prints the major and minor versions], so other parts of the version are not included.
+///
+/// [just prints the major and minor versions]: https://github.com/rust-lang/rust/blob/b5c9e2448c9ace53ad5c11585803894651b18b0a/compiler/rustc_codegen_llvm/src/llvm_util.rs#L173-L178
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct LLVMVersion {
+    // fields must be ordered major, minor for comparison to be correct
+    /// Major version
+    pub major: u64,
+    /// Minor version
+    pub minor: u64,
+}
+
+impl fmt::Display for LLVMVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}.{}", self.major, self.minor)
+    }
 }
 
 /// Rustc version plus metada like git short hash and build date.
@@ -108,6 +130,9 @@ pub struct VersionMeta {
 
     /// Short version string of the compiler
     pub short_version_string: String,
+
+    /// Version of LLVM used by the compiler
+    pub llvm_version: Option<LLVMVersion>,
 }
 
 impl VersionMeta {
@@ -182,7 +207,7 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
     let host = expect_prefix(out[idx], "host: ")?;
     idx += 1;
     let release = expect_prefix(out[idx], "release: ")?;
-
+    idx += 1;
     let semver: Version = release.parse()?;
 
     let channel = if semver.pre.is_empty() {
@@ -196,6 +221,42 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
         }
     };
 
+    let llvm_version = if let Some(&line) = out.get(idx) {
+        let llvm_version = expect_prefix(line, "LLVM version: ")?;
+        fn parse_part(part: &str) -> Result<u64> {
+            if part == "0" {
+                Ok(0)
+            } else if part.is_empty()
+                || part.as_bytes()[0] == b'0'
+                || part.find(|ch: char| !ch.is_ascii_digit()).is_some()
+            {
+                Err(Error::UnexpectedVersionFormat)
+            } else {
+                part.parse().map_err(|_| Error::UnexpectedVersionFormat)
+            }
+        }
+
+        let mut parts = llvm_version.split('.');
+        let major = parse_part(parts.next().unwrap())?;
+        let mut minor = 0;
+        if let Some(s) = parts.next() {
+            minor = parse_part(s)?;
+            if parts.next().is_some() {
+                return Err(Error::UnexpectedVersionFormat);
+            }
+            if major >= 4 && minor != 0 {
+                // only LLVM versions earlier than 4.0 can have non-zero minor versions
+                return Err(Error::UnexpectedVersionFormat);
+            }
+        } else if major < 4 {
+            // LLVM versions earlier than 4.0 have significant minor versions, so require the minor version in this case.
+            return Err(Error::UnexpectedVersionFormat);
+        }
+        Some(LLVMVersion { major, minor })
+    } else {
+        None
+    };
+
     Ok(VersionMeta {
         semver: semver,
         commit_hash: commit_hash,
@@ -204,6 +265,7 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
         channel: channel,
         host: host.into(),
         short_version_string: short_version_string.into(),
+        llvm_version,
     })
 }
 
@@ -262,6 +324,7 @@ release: 1.0.0",
         version.short_version_string,
         "rustc 1.0.0 (a59de37e9 2015-05-13) (built 2015-05-14)"
     );
+    assert_eq!(version.llvm_version, None);
 }
 
 #[test]
@@ -282,6 +345,7 @@ release: 1.3.0",
     assert_eq!(version.channel, Channel::Stable);
     assert_eq!(version.host, "x86_64-unknown-linux-gnu");
     assert_eq!(version.short_version_string, "rustc 1.3.0");
+    assert_eq!(version.llvm_version, None);
 }
 
 #[test]
@@ -308,6 +372,7 @@ release: 1.5.0-nightly",
         version.short_version_string,
         "rustc 1.5.0-nightly (65d5c0833 2015-09-29)"
     );
+    assert_eq!(version.llvm_version, None);
 }
 
 #[test]
@@ -334,6 +399,7 @@ release: 1.3.0",
         version.short_version_string,
         "rustc 1.3.0 (9a92aaf19 2015-09-15)"
     );
+    assert_eq!(version.llvm_version, None);
 }
 
 #[test]
@@ -361,6 +427,169 @@ LLVM version: 3.9",
         version.short_version_string,
         "rustc 1.16.0-nightly (5d994d8b7 2017-01-05)"
     );
+    assert_eq!(
+        version.llvm_version,
+        Some(LLVMVersion { major: 3, minor: 9 })
+    );
+}
+
+#[test]
+fn parse_1_47_0_stable() {
+    let version = version_meta_for(
+        "rustc 1.47.0 (18bf6b4f0 2020-10-07)
+binary: rustc
+commit-hash: 18bf6b4f01a6feaf7259ba7cdae58031af1b7b39
+commit-date: 2020-10-07
+host: powerpc64le-unknown-linux-gnu
+release: 1.47.0
+LLVM version: 11.0",
+    )
+    .unwrap();
+
+    assert_eq!(version.semver, Version::parse("1.47.0").unwrap());
+    assert_eq!(
+        version.commit_hash,
+        Some("18bf6b4f01a6feaf7259ba7cdae58031af1b7b39".into())
+    );
+    assert_eq!(version.commit_date, Some("2020-10-07".into()));
+    assert_eq!(version.channel, Channel::Stable);
+    assert_eq!(version.host, "powerpc64le-unknown-linux-gnu");
+    assert_eq!(
+        version.short_version_string,
+        "rustc 1.47.0 (18bf6b4f0 2020-10-07)"
+    );
+    assert_eq!(
+        version.llvm_version,
+        Some(LLVMVersion {
+            major: 11,
+            minor: 0,
+        })
+    );
+}
+
+#[test]
+fn parse_debian_buster() {
+    let version = version_meta_for(
+        "rustc 1.41.1
+binary: rustc
+commit-hash: unknown
+commit-date: unknown
+host: powerpc64le-unknown-linux-gnu
+release: 1.41.1
+LLVM version: 7.0",
+    )
+    .unwrap();
+
+    assert_eq!(version.semver, Version::parse("1.41.1").unwrap());
+    assert_eq!(version.commit_hash, None);
+    assert_eq!(version.commit_date, None);
+    assert_eq!(version.channel, Channel::Stable);
+    assert_eq!(version.host, "powerpc64le-unknown-linux-gnu");
+    assert_eq!(version.short_version_string, "rustc 1.41.1");
+    assert_eq!(
+        version.llvm_version,
+        Some(LLVMVersion { major: 7, minor: 0 })
+    );
+}
+
+#[test]
+fn parse_termux() {
+    let version = version_meta_for(
+        "rustc 1.46.0
+binary: rustc
+commit-hash: unknown
+commit-date: unknown
+host: aarch64-linux-android
+release: 1.46.0
+LLVM version: 10.0",
+    )
+    .unwrap();
+
+    assert_eq!(version.semver, Version::parse("1.46.0").unwrap());
+    assert_eq!(version.commit_hash, None);
+    assert_eq!(version.commit_date, None);
+    assert_eq!(version.channel, Channel::Stable);
+    assert_eq!(version.host, "aarch64-linux-android");
+    assert_eq!(version.short_version_string, "rustc 1.46.0");
+    assert_eq!(
+        version.llvm_version,
+        Some(LLVMVersion {
+            major: 10,
+            minor: 0,
+        })
+    );
+}
+
+#[test]
+fn parse_bad_llvm_version_invalid_char() {
+    let res = version_meta_for(
+        "rustc 1.46.0
+binary: rustc
+commit-hash: unknown
+commit-date: unknown
+host: aarch64-linux-android
+release: 1.46.0
+LLVM version: 10.0x",
+    );
+
+    assert!(match res {
+        Err(Error::UnexpectedVersionFormat) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_bad_llvm_version_too_long() {
+    let res = version_meta_for(
+        "rustc 1.46.0
+binary: rustc
+commit-hash: unknown
+commit-date: unknown
+host: aarch64-linux-android
+release: 1.46.0
+LLVM version: 10.0.0.0.0",
+    );
+
+    assert!(match res {
+        Err(Error::UnexpectedVersionFormat) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_bad_llvm_version_missing_minor() {
+    let res = version_meta_for(
+        "rustc 1.46.0
+binary: rustc
+commit-hash: unknown
+commit-date: unknown
+host: aarch64-linux-android
+release: 1.46.0
+LLVM version: 3",
+    );
+
+    assert!(match res {
+        Err(Error::UnexpectedVersionFormat) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_bad_llvm_version_nonzero_minor() {
+    let res = version_meta_for(
+        "rustc 1.46.0
+binary: rustc
+commit-hash: unknown
+commit-date: unknown
+host: aarch64-linux-android
+release: 1.46.0
+LLVM version: 5.6",
+    );
+
+    assert!(match res {
+        Err(Error::UnexpectedVersionFormat) => true,
+        _ => false,
+    });
 }
 
 /*
