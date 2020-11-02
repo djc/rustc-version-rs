@@ -112,7 +112,7 @@ impl FromStr for LlvmVersion {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parts = s
-            .splitn(3, '.')
+            .split('.')
             .map(|part| -> Result<u64, LlvmVersionParseError> {
                 match part.as_bytes() {
                     // check for at least 2 characters to avoid erroring on "0"
