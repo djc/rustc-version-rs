@@ -592,6 +592,12 @@ LLVM version: 5.6",
     });
 }
 
+#[test]
+fn test_llvm_version_comparison() {
+    // check that field order is correct
+    assert!(LLVMVersion { major: 3, minor: 9 } < LLVMVersion { major: 4, minor: 0 });
+}
+
 /*
 #[test]
 fn version_matches_replacement() {
