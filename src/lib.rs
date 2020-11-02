@@ -569,8 +569,18 @@ fn parse_llvm_version_leading_zero_on_nonzero() {
 }
 
 #[test]
-fn parse_llvm_version_too_many_components() {
+fn parse_llvm_version_3_components() {
     let res: Result<LlvmVersion, _> = "4.0.0".parse();
+
+    assert!(match res {
+        Err(LlvmVersionParseError::TooManyComponents) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_llvm_version_4_components() {
+    let res: Result<LlvmVersion, _> = "4.0.0.0".parse();
 
     assert!(match res {
         Err(LlvmVersionParseError::TooManyComponents) => true,
