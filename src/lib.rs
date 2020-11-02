@@ -61,16 +61,16 @@ doctest!("../README.md");
 
 extern crate semver;
 use semver::Identifier;
-use std::ffi::OsString;
 use std::process::Command;
 use std::{env, fmt, str};
+use std::{ffi::OsString, str::FromStr};
 
 // Convenience re-export to allow version comparison without needing to add
 // semver crate.
 pub use semver::Version;
 
 mod errors;
-pub use errors::{Error, Result};
+pub use errors::{Error, LlvmVersionParseError, Result};
 
 /// Release channel of the compiler.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
@@ -93,7 +93,7 @@ pub enum Channel {
 ///
 /// [just prints the major and minor versions]: https://github.com/rust-lang/rust/blob/b5c9e2448c9ace53ad5c11585803894651b18b0a/compiler/rustc_codegen_llvm/src/llvm_util.rs#L173-L178
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct LLVMVersion {
+pub struct LlvmVersion {
     // fields must be ordered major, minor for comparison to be correct
     /// Major version
     pub major: u64,
@@ -101,9 +101,42 @@ pub struct LLVMVersion {
     pub minor: u64,
 }
 
-impl fmt::Display for LLVMVersion {
+impl fmt::Display for LlvmVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}", self.major, self.minor)
+    }
+}
+
+impl FromStr for LlvmVersion {
+    type Err = LlvmVersionParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s
+            .splitn(3, '.')
+            .map(|part| -> Result<u64, LlvmVersionParseError> {
+                match part.as_bytes() {
+                    // check for at least 2 characters to avoid erroring on "0"
+                    [b'0', _, ..] => Err(LlvmVersionParseError::ComponentMustNotHaveLeadingZeros),
+                    [b'-', ..] | [b'+', ..] => Err(LlvmVersionParseError::ComponentMustNotHaveSign),
+                    _ => Ok(part.parse()?),
+                }
+            });
+        let major = parts.next().unwrap()?;
+        let mut minor = 0;
+        if let Some(part) = parts.next().transpose()? {
+            minor = part;
+            if major >= 4 && minor != 0 {
+                // only LLVM versions earlier than 4.0 can have non-zero minor versions
+                return Err(LlvmVersionParseError::MinorVersionMustBeZeroAfter4);
+            }
+        } else if major < 4 {
+            // LLVM versions earlier than 4.0 have significant minor versions, so require the minor version in this case.
+            return Err(LlvmVersionParseError::MinorVersionRequiredBefore4);
+        }
+        if parts.next().transpose()?.is_some() {
+            return Err(LlvmVersionParseError::TooManyComponents);
+        }
+        Ok(Self { major, minor })
     }
 }
 
@@ -132,7 +165,7 @@ pub struct VersionMeta {
     pub short_version_string: String,
 
     /// Version of LLVM used by the compiler
-    pub llvm_version: Option<LLVMVersion>,
+    pub llvm_version: Option<LlvmVersion>,
 }
 
 impl VersionMeta {
@@ -222,47 +255,17 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
     };
 
     let llvm_version = if let Some(&line) = out.get(idx) {
-        let llvm_version = expect_prefix(line, "LLVM version: ")?;
-        fn parse_part(part: &str) -> Result<u64> {
-            if part == "0" {
-                Ok(0)
-            } else if part.is_empty()
-                || part.as_bytes()[0] == b'0'
-                || part.find(|ch: char| !ch.is_ascii_digit()).is_some()
-            {
-                Err(Error::UnexpectedVersionFormat)
-            } else {
-                part.parse().map_err(|_| Error::UnexpectedVersionFormat)
-            }
-        }
-
-        let mut parts = llvm_version.split('.');
-        let major = parse_part(parts.next().unwrap())?;
-        let mut minor = 0;
-        if let Some(s) = parts.next() {
-            minor = parse_part(s)?;
-            if parts.next().is_some() {
-                return Err(Error::UnexpectedVersionFormat);
-            }
-            if major >= 4 && minor != 0 {
-                // only LLVM versions earlier than 4.0 can have non-zero minor versions
-                return Err(Error::UnexpectedVersionFormat);
-            }
-        } else if major < 4 {
-            // LLVM versions earlier than 4.0 have significant minor versions, so require the minor version in this case.
-            return Err(Error::UnexpectedVersionFormat);
-        }
-        Some(LLVMVersion { major, minor })
+        Some(expect_prefix(line, "LLVM version: ")?.parse()?)
     } else {
         None
     };
 
     Ok(VersionMeta {
-        semver: semver,
-        commit_hash: commit_hash,
-        commit_date: commit_date,
-        build_date: build_date,
-        channel: channel,
+        semver,
+        commit_hash,
+        commit_date,
+        build_date,
+        channel,
         host: host.into(),
         short_version_string: short_version_string.into(),
         llvm_version,
@@ -429,7 +432,7 @@ LLVM version: 3.9",
     );
     assert_eq!(
         version.llvm_version,
-        Some(LLVMVersion { major: 3, minor: 9 })
+        Some(LlvmVersion { major: 3, minor: 9 })
     );
 }
 
@@ -460,7 +463,7 @@ LLVM version: 11.0",
     );
     assert_eq!(
         version.llvm_version,
-        Some(LLVMVersion {
+        Some(LlvmVersion {
             major: 11,
             minor: 0,
         })
@@ -488,7 +491,7 @@ LLVM version: 7.0",
     assert_eq!(version.short_version_string, "rustc 1.41.1");
     assert_eq!(
         version.llvm_version,
-        Some(LLVMVersion { major: 7, minor: 0 })
+        Some(LlvmVersion { major: 7, minor: 0 })
     );
 }
 
@@ -513,7 +516,7 @@ LLVM version: 10.0",
     assert_eq!(version.short_version_string, "rustc 1.46.0");
     assert_eq!(
         version.llvm_version,
-        Some(LLVMVersion {
+        Some(LlvmVersion {
             major: 10,
             minor: 0,
         })
@@ -521,81 +524,158 @@ LLVM version: 10.0",
 }
 
 #[test]
-fn parse_bad_llvm_version_invalid_char() {
-    let res = version_meta_for(
-        "rustc 1.46.0
-binary: rustc
-commit-hash: unknown
-commit-date: unknown
-host: aarch64-linux-android
-release: 1.46.0
-LLVM version: 10.0x",
-    );
-
+fn parse_llvm_version_empty() {
+    let res: Result<LlvmVersion, _> = "".parse();
     assert!(match res {
-        Err(Error::UnexpectedVersionFormat) => true,
+        Err(LlvmVersionParseError::ParseIntError(_)) => true,
         _ => false,
     });
 }
 
 #[test]
-fn parse_bad_llvm_version_too_long() {
-    let res = version_meta_for(
-        "rustc 1.46.0
-binary: rustc
-commit-hash: unknown
-commit-date: unknown
-host: aarch64-linux-android
-release: 1.46.0
-LLVM version: 10.0.0.0.0",
-    );
-
+fn parse_llvm_version_invalid_char() {
+    let res: Result<LlvmVersion, _> = "A".parse();
     assert!(match res {
-        Err(Error::UnexpectedVersionFormat) => true,
+        Err(LlvmVersionParseError::ParseIntError(_)) => true,
         _ => false,
     });
 }
 
 #[test]
-fn parse_bad_llvm_version_missing_minor() {
-    let res = version_meta_for(
-        "rustc 1.46.0
-binary: rustc
-commit-hash: unknown
-commit-date: unknown
-host: aarch64-linux-android
-release: 1.46.0
-LLVM version: 3",
-    );
-
+fn parse_llvm_version_overflow() {
+    let res: Result<LlvmVersion, _> = "9999999999999999999999999999999".parse();
     assert!(match res {
-        Err(Error::UnexpectedVersionFormat) => true,
+        Err(LlvmVersionParseError::ParseIntError(_)) => true,
         _ => false,
     });
 }
 
 #[test]
-fn parse_bad_llvm_version_nonzero_minor() {
-    let res = version_meta_for(
-        "rustc 1.46.0
-binary: rustc
-commit-hash: unknown
-commit-date: unknown
-host: aarch64-linux-android
-release: 1.46.0
-LLVM version: 5.6",
-    );
-
+fn parse_llvm_version_leading_zero_on_zero() {
+    let res: Result<LlvmVersion, _> = "00".parse();
     assert!(match res {
-        Err(Error::UnexpectedVersionFormat) => true,
+        Err(LlvmVersionParseError::ComponentMustNotHaveLeadingZeros) => true,
         _ => false,
     });
+}
+
+#[test]
+fn parse_llvm_version_leading_zero_on_nonzero() {
+    let res: Result<LlvmVersion, _> = "01".parse();
+    assert!(match res {
+        Err(LlvmVersionParseError::ComponentMustNotHaveLeadingZeros) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_llvm_version_too_many_components() {
+    let res: Result<LlvmVersion, _> = "4.0.0".parse();
+
+    assert!(match res {
+        Err(LlvmVersionParseError::TooManyComponents) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_llvm_version_component_sign_plus() {
+    let res: Result<LlvmVersion, _> = "1.+3".parse();
+
+    assert!(match res {
+        Err(LlvmVersionParseError::ComponentMustNotHaveSign) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_llvm_version_component_sign_minus() {
+    let res: Result<LlvmVersion, _> = "1.-3".parse();
+
+    assert!(match res {
+        Err(LlvmVersionParseError::ComponentMustNotHaveSign) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_llvm_version_3() {
+    let res: Result<LlvmVersion, _> = "3".parse();
+
+    assert!(match res {
+        Err(LlvmVersionParseError::MinorVersionRequiredBefore4) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_llvm_version_4_1() {
+    let res: Result<LlvmVersion, _> = "4.1".parse();
+
+    assert!(match res {
+        Err(LlvmVersionParseError::MinorVersionMustBeZeroAfter4) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn parse_llvm_version_5() {
+    let v: LlvmVersion = "5".parse().unwrap();
+    assert_eq!(v, LlvmVersion { major: 5, minor: 0 });
+}
+
+#[test]
+fn parse_llvm_version_5_0() {
+    let v: LlvmVersion = "5.0".parse().unwrap();
+    assert_eq!(v, LlvmVersion { major: 5, minor: 0 });
+}
+
+#[test]
+fn parse_llvm_version_4_0() {
+    let v: LlvmVersion = "4.0".parse().unwrap();
+    assert_eq!(v, LlvmVersion { major: 4, minor: 0 });
+}
+
+#[test]
+fn parse_llvm_version_3_0() {
+    let v: LlvmVersion = "3.0".parse().unwrap();
+    assert_eq!(v, LlvmVersion { major: 3, minor: 0 });
+}
+
+#[test]
+fn parse_llvm_version_3_9() {
+    let v: LlvmVersion = "3.9".parse().unwrap();
+    assert_eq!(v, LlvmVersion { major: 3, minor: 9 });
+}
+
+#[test]
+fn parse_llvm_version_11_0() {
+    let v: LlvmVersion = "11.0".parse().unwrap();
+    assert_eq!(
+        v,
+        LlvmVersion {
+            major: 11,
+            minor: 0
+        }
+    );
+}
+
+#[test]
+fn parse_llvm_version_11() {
+    let v: LlvmVersion = "11".parse().unwrap();
+    assert_eq!(
+        v,
+        LlvmVersion {
+            major: 11,
+            minor: 0
+        }
+    );
 }
 
 #[test]
 fn test_llvm_version_comparison() {
     // check that field order is correct
-    assert!(LLVMVersion { major: 3, minor: 9 } < LLVMVersion { major: 4, minor: 0 });
+    assert!(LlvmVersion { major: 3, minor: 9 } < LlvmVersion { major: 4, minor: 0 });
 }
 
 /*
