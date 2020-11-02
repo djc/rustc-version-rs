@@ -87,7 +87,7 @@ pub enum Channel {
 
 /// LLVM version
 ///
-/// LLVM's version numbering scheme is not semvar compatible until version 4.0
+/// LLVM's version numbering scheme is not semver compatible until version 4.0
 ///
 /// rustc [just prints the major and minor versions], so other parts of the version are not included.
 ///
@@ -107,7 +107,7 @@ impl fmt::Display for LLVMVersion {
     }
 }
 
-/// Rustc version plus metada like git short hash and build date.
+/// Rustc version plus metadata like git short hash and build date.
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct VersionMeta {
     /// Version of the compiler
