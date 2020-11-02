@@ -4,15 +4,15 @@ use std::{self, error, fmt, io, str};
 /// The error type for this crate.
 #[derive(Debug)]
 pub enum Error {
-    /// An error ocurrend when executing the `rustc` command.
+    /// An error occurred when executing the `rustc` command.
     CouldNotExecuteCommand(io::Error),
     /// The output of `rustc -vV` was not valid utf-8.
     Utf8Error(str::Utf8Error),
     /// The output of `rustc -vV` was not in the expected format.
     UnexpectedVersionFormat,
-    /// An error ocurred in parsing a `VersionReq`.
+    /// An error occurred in parsing a `VersionReq`.
     ReqParseError(semver::ReqParseError),
-    /// An error ocurred in parsing the semver.
+    /// An error occurred in parsing the semver.
     SemVerError(semver::SemVerError),
     /// The pre-release tag is unknown.
     UnknownPreReleaseTag(Identifier),
