@@ -114,11 +114,14 @@ impl FromStr for LlvmVersion {
         let mut parts = s
             .split('.')
             .map(|part| -> Result<u64, LlvmVersionParseError> {
-                match part.as_bytes() {
-                    // check for at least 2 characters to avoid erroring on "0"
-                    [b'0', _, ..] => Err(LlvmVersionParseError::ComponentMustNotHaveLeadingZeros),
-                    [b'-', ..] | [b'+', ..] => Err(LlvmVersionParseError::ComponentMustNotHaveSign),
-                    _ => Ok(part.parse()?),
+                if part == "0" {
+                    Ok(0)
+                } else if part.starts_with('0') {
+                    Err(LlvmVersionParseError::ComponentMustNotHaveLeadingZeros)
+                } else if part.starts_with('-') || part.starts_with('+') {
+                    Err(LlvmVersionParseError::ComponentMustNotHaveSign)
+                } else {
+                    Ok(part.parse()?)
                 }
             });
         let major = parts.next().unwrap()?;
