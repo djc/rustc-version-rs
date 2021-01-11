@@ -1,7 +1,5 @@
 #![allow(clippy::match_like_matches_macro)]
 
-extern crate rustc_version;
-
 use std::process::Command;
 
 use rustc_version::{

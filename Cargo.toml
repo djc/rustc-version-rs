@@ -8,6 +8,7 @@ readme = "README.md"
 documentation = "https://docs.rs/rustc_version/"
 repository = "https://github.com/Kimundi/rustc-version-rs"
 keywords = ["version", "rustc"]
+edition = "2018"
 
 [badges]
 travis-ci = { repository = "Kimundi/rustc-version-rs" }

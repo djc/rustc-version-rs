@@ -87,10 +87,10 @@ pub enum Error {
     /// An error occurred in parsing a `LlvmVersion`.
     LlvmVersionError(LlvmVersionParseError),
 }
-use Error::*;
+use crate::Error::*;
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             CouldNotExecuteCommand(ref e) => write!(f, "could not execute command: {}", e),
             CommandError {
