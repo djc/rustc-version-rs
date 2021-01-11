@@ -7,6 +7,7 @@
 // except according to those terms.
 
 #![warn(missing_docs)]
+#![allow(clippy::match_like_matches_macro)]
 
 //! Simple library for getting the version information of a `rustc`
 //! compiler.
@@ -215,6 +216,7 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
 
     let short_version_string = out[0];
 
+    #[allow(clippy::manual_strip)]
     fn expect_prefix<'a>(line: &'a str, prefix: &str) -> Result<&'a str> {
         if line.starts_with(prefix) {
             Ok(&line[prefix.len()..])
