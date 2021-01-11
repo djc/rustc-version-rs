@@ -124,10 +124,12 @@ impl FromStr for LlvmVersion {
                     Ok(part.parse()?)
                 }
             });
+
         let major = parts.next().unwrap()?;
         let mut minor = 0;
-        if let Some(part) = parts.next().transpose()? {
-            minor = part;
+
+        if let Some(part) = parts.next() {
+            minor = part?;
             if major >= 4 && minor != 0 {
                 // only LLVM versions earlier than 4.0 can have non-zero minor versions
                 return Err(LlvmVersionParseError::MinorVersionMustBeZeroAfter4);
@@ -136,9 +138,11 @@ impl FromStr for LlvmVersion {
             // LLVM versions earlier than 4.0 have significant minor versions, so require the minor version in this case.
             return Err(LlvmVersionParseError::MinorVersionRequiredBefore4);
         }
-        if parts.next().transpose()?.is_some() {
+
+        if parts.next().is_some() {
             return Err(LlvmVersionParseError::TooManyComponents);
         }
+
         Ok(Self { major, minor })
     }
 }

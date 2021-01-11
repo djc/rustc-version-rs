@@ -20,27 +20,31 @@ pub enum LlvmVersionParseError {
 
 impl From<num::ParseIntError> for LlvmVersionParseError {
     fn from(e: num::ParseIntError) -> Self {
-        Self::ParseIntError(e)
+        LlvmVersionParseError::ParseIntError(e)
     }
 }
 
 impl fmt::Display for LlvmVersionParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ParseIntError(e) => write!(f, "error parsing LLVM version component: {}", e),
-            Self::ComponentMustNotHaveLeadingZeros => {
+            LlvmVersionParseError::ParseIntError(e) => {
+                write!(f, "error parsing LLVM version component: {}", e)
+            }
+            LlvmVersionParseError::ComponentMustNotHaveLeadingZeros => {
                 write!(f, "a version component must not have leading zeros")
             }
-            Self::ComponentMustNotHaveSign => write!(f, "a version component must not have a sign"),
-            Self::MinorVersionMustBeZeroAfter4 => write!(
+            LlvmVersionParseError::ComponentMustNotHaveSign => {
+                write!(f, "a version component must not have a sign")
+            }
+            LlvmVersionParseError::MinorVersionMustBeZeroAfter4 => write!(
                 f,
                 "LLVM's minor version component must be 0 for versions greater than 4.0"
             ),
-            Self::MinorVersionRequiredBefore4 => write!(
+            LlvmVersionParseError::MinorVersionRequiredBefore4 => write!(
                 f,
                 "LLVM's minor version component is required for versions less than 4.0"
             ),
-            Self::TooManyComponents => write!(f, "too many version components"),
+            LlvmVersionParseError::TooManyComponents => write!(f, "too many version components"),
         }
     }
 }
@@ -48,12 +52,12 @@ impl fmt::Display for LlvmVersionParseError {
 impl error::Error for LlvmVersionParseError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            Self::ParseIntError(e) => Some(e),
-            Self::ComponentMustNotHaveLeadingZeros
-            | Self::ComponentMustNotHaveSign
-            | Self::MinorVersionMustBeZeroAfter4
-            | Self::MinorVersionRequiredBefore4
-            | Self::TooManyComponents => None,
+            LlvmVersionParseError::ParseIntError(e) => Some(e),
+            LlvmVersionParseError::ComponentMustNotHaveLeadingZeros
+            | LlvmVersionParseError::ComponentMustNotHaveSign
+            | LlvmVersionParseError::MinorVersionMustBeZeroAfter4
+            | LlvmVersionParseError::MinorVersionRequiredBefore4
+            | LlvmVersionParseError::TooManyComponents => None,
         }
     }
 }
