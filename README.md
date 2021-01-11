@@ -8,7 +8,7 @@ rustc-version-rs
 A library for querying the version of a `rustc` compiler.
 
 This can be used by build scripts or other tools dealing with Rust sources
-to make decisions based on the version of the compiler.
+to make decisions based on the version of the compiler. Current MSRV is 1.32.0.
 
 # Getting Started
 
