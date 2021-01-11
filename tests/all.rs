@@ -30,24 +30,6 @@ fn smoketest() {
 }
 
 #[test]
-fn parse_unexpected() {
-    let res = version_meta_for(
-        "rustc 1.0.0 (a59de37e9 2015-05-13) (built 2015-05-14)
-binary: rustc
-commit-hash: a59de37e99060162a2674e3ff45409ac73595c0e
-commit-date: 2015-05-13
-rust-birthday: 2015-05-14
-host: x86_64-unknown-linux-gnu
-release: 1.0.0",
-    );
-
-    assert!(match res {
-        Err(Error::UnexpectedVersionFormat) => true,
-        _ => false,
-    });
-}
-
-#[test]
 fn parse_1_0_0() {
     let version = version_meta_for(
         "rustc 1.0.0 (a59de37e9 2015-05-13) (built 2015-05-14)
