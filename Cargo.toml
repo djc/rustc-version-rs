@@ -10,9 +10,6 @@ repository = "https://github.com/Kimundi/rustc-version-rs"
 keywords = ["version", "rustc"]
 edition = "2018"
 
-[badges]
-travis-ci = { repository = "Kimundi/rustc-version-rs" }
-
 [dependencies]
 semver = "0.11"
 
