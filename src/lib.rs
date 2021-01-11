@@ -59,7 +59,6 @@ extern crate doc_comment;
 #[cfg(test)]
 doctest!("../README.md");
 
-extern crate semver;
 use semver::Identifier;
 use std::process::Command;
 use std::{env, fmt, str};
@@ -70,7 +69,7 @@ use std::{ffi::OsString, str::FromStr};
 pub use semver::Version;
 
 mod errors;
-pub use errors::{Error, LlvmVersionParseError, Result};
+pub use crate::errors::{Error, LlvmVersionParseError, Result};
 
 /// Release channel of the compiler.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
