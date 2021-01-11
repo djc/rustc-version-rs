@@ -36,7 +36,6 @@ rustc_version = "0.2"
 ```rust
 // This could be a cargo build script
 
-extern crate rustc_version;
 use rustc_version::{version, version_meta, Channel, Version};
 
 fn main() {
