@@ -61,8 +61,15 @@ impl error::Error for LlvmVersionParseError {
 /// The error type for this crate.
 #[derive(Debug)]
 pub enum Error {
-    /// An error occurred when executing the `rustc` command.
+    /// An error occurred while trying to find the `rustc` to run.
     CouldNotExecuteCommand(io::Error),
+    /// Error output from the command that was run.
+    CommandError {
+        /// stdout output from the command
+        stdout: String,
+        /// stderr output from the command
+        stderr: String,
+    },
     /// The output of `rustc -vV` was not valid utf-8.
     Utf8Error(str::Utf8Error),
     /// The output of `rustc -vV` was not in the expected format.
@@ -82,6 +89,14 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             CouldNotExecuteCommand(ref e) => write!(f, "could not execute command: {}", e),
+            CommandError {
+                ref stdout,
+                ref stderr,
+            } => write!(
+                f,
+                "error from command -- stderr:\n\n{}\n\nstderr:\n\n{}",
+                stderr, stdout,
+            ),
             Utf8Error(_) => write!(f, "invalid UTF-8 output from `rustc -vV`"),
             UnexpectedVersionFormat => write!(f, "unexpected `rustc -vV` format"),
             ReqParseError(ref e) => write!(f, "error parsing version requirement: {}", e),
@@ -96,6 +111,7 @@ impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             CouldNotExecuteCommand(ref e) => Some(e),
+            CommandError { .. } => None,
             Utf8Error(ref e) => Some(e),
             UnexpectedVersionFormat => None,
             ReqParseError(ref e) => Some(e),

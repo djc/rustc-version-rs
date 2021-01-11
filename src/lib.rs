@@ -173,16 +173,20 @@ pub struct VersionMeta {
 
 impl VersionMeta {
     /// Returns the version metadata for `cmd`, which should be a `rustc` command.
-    pub fn for_command(cmd: Command) -> Result<VersionMeta> {
-        let mut cmd = cmd;
-
+    pub fn for_command(mut cmd: Command) -> Result<VersionMeta> {
         let out = cmd
             .arg("-vV")
             .output()
             .map_err(Error::CouldNotExecuteCommand)?;
-        let out = str::from_utf8(&out.stdout)?;
 
-        version_meta_for(out)
+        if !out.status.success() {
+            return Err(Error::CommandError {
+                stdout: String::from_utf8_lossy(&out.stdout).into(),
+                stderr: String::from_utf8_lossy(&out.stderr).into(),
+            });
+        }
+
+        version_meta_for(str::from_utf8(&out.stdout)?)
     }
 }
 
@@ -273,6 +277,17 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
         short_version_string: short_version_string.into(),
         llvm_version,
     })
+}
+
+#[test]
+fn rustc_error() {
+    let mut cmd = Command::new("rustc");
+    cmd.arg("--FOO");
+    let stderr = match VersionMeta::for_command(cmd) {
+        Err(Error::CommandError { stdout: _, stderr }) => stderr,
+        _ => panic!("command error expected"),
+    };
+    assert_eq!(stderr, "error: Unrecognized option: \'FOO\'\n\n");
 }
 
 #[test]
