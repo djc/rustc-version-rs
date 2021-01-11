@@ -56,6 +56,7 @@ extern crate doc_comment;
 #[cfg(test)]
 doctest!("../README.md");
 
+use std::collections::HashMap;
 use std::process::Command;
 use std::{env, error, fmt, io, num, str};
 use std::{ffi::OsString, str::FromStr};
@@ -206,65 +207,46 @@ pub fn version_meta() -> Result<VersionMeta> {
 /// the SemVer version and additional metadata
 /// like the git short hash and build date.
 pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
-    let out: Vec<_> = verbose_version_string.lines().collect();
+    let mut map = HashMap::new();
+    for (i, line) in verbose_version_string.lines().enumerate() {
+        if i == 0 {
+            map.insert("short", line);
+            continue;
+        }
 
-    if !(out.len() >= 6 && out.len() <= 8) {
-        return Err(Error::UnexpectedVersionFormat);
-    }
+        let mut parts = line.splitn(2, ": ");
+        let key = match parts.next() {
+            Some(key) => key,
+            None => continue,
+        };
 
-    let short_version_string = out[0];
-
-    #[allow(clippy::manual_strip)]
-    fn expect_prefix<'a>(line: &'a str, prefix: &str) -> Result<&'a str> {
-        if line.starts_with(prefix) {
-            Ok(&line[prefix.len()..])
-        } else {
-            Err(Error::UnexpectedVersionFormat)
+        if let Some(value) = parts.next() {
+            map.insert(key, value);
         }
     }
 
-    let commit_hash = match expect_prefix(out[2], "commit-hash: ")? {
-        "unknown" => None,
-        hash => Some(hash.to_owned()),
-    };
-
-    let commit_date = match expect_prefix(out[3], "commit-date: ")? {
-        "unknown" => None,
-        hash => Some(hash.to_owned()),
-    };
-
-    // Handle that the build date may or may not be present.
-    let mut idx = 4;
-    let mut build_date = None;
-    if out[idx].starts_with("build-date") {
-        build_date = match expect_prefix(out[idx], "build-date: ")? {
-            "unknown" => None,
-            s => Some(s.to_owned()),
-        };
-        idx += 1;
-    }
-
-    let host = expect_prefix(out[idx], "host: ")?;
-    idx += 1;
-    let release = expect_prefix(out[idx], "release: ")?;
-    idx += 1;
+    let short_version_string = expect_key("short", &map)?;
+    let host = expect_key("host", &map)?;
+    let release = expect_key("release", &map)?;
     let semver: Version = release.parse()?;
 
-    let channel = if semver.pre.is_empty() {
-        Channel::Stable
-    } else {
-        match semver.pre[0] {
-            Identifier::AlphaNumeric(ref s) if s == "dev" => Channel::Dev,
-            Identifier::AlphaNumeric(ref s) if s == "beta" => Channel::Beta,
-            Identifier::AlphaNumeric(ref s) if s == "nightly" => Channel::Nightly,
-            ref x => return Err(Error::UnknownPreReleaseTag(x.clone())),
-        }
+    let channel = match semver.pre.first() {
+        None => Channel::Stable,
+        Some(Identifier::AlphaNumeric(s)) if s == "dev" => Channel::Dev,
+        Some(Identifier::AlphaNumeric(s)) if s == "beta" => Channel::Beta,
+        Some(Identifier::AlphaNumeric(s)) if s == "nightly" => Channel::Nightly,
+        Some(x) => return Err(Error::UnknownPreReleaseTag(x.clone())),
     };
 
-    let llvm_version = if let Some(&line) = out.get(idx) {
-        Some(expect_prefix(line, "LLVM version: ")?.parse()?)
-    } else {
-        None
+    let commit_hash = expect_key_or_unknown("commit-hash", &map)?;
+    let commit_date = expect_key_or_unknown("commit-date", &map)?;
+    let build_date = map
+        .get("build-date")
+        .filter(|&v| *v != "unknown")
+        .map(|&v| String::from(v));
+    let llvm_version = match map.get("LLVM version") {
+        Some(&v) => Some(v.parse()?),
+        None => None,
     };
 
     Ok(VersionMeta {
@@ -273,10 +255,24 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
         commit_date,
         build_date,
         channel,
-        host: host.into(),
-        short_version_string: short_version_string.into(),
+        host,
+        short_version_string,
         llvm_version,
     })
+}
+
+fn expect_key_or_unknown(key: &str, map: &HashMap<&str, &str>) -> Result<Option<String>, Error> {
+    match map.get(key) {
+        Some(&v) if v == "unknown" => Ok(None),
+        Some(&v) => Ok(Some(String::from(v))),
+        None => Err(Error::UnexpectedVersionFormat),
+    }
+}
+
+fn expect_key(key: &str, map: &HashMap<&str, &str>) -> Result<String, Error> {
+    map.get(key)
+        .map(|&v| String::from(v))
+        .ok_or(Error::UnexpectedVersionFormat)
 }
 
 /// LLVM Version Parse Error
