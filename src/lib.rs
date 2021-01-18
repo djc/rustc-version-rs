@@ -95,6 +95,7 @@ pub struct LlvmVersion {
     pub major: u64,
     /// Minor version
     pub minor: u64,
+    // TODO: expose micro version here
 }
 
 impl fmt::Display for LlvmVersion {
@@ -133,6 +134,10 @@ impl FromStr for LlvmVersion {
         } else if major < 4 {
             // LLVM versions earlier than 4.0 have significant minor versions, so require the minor version in this case.
             return Err(LlvmVersionParseError::MinorVersionRequiredBefore4);
+        }
+
+        if let Some(Err(e)) = parts.next() {
+            return Err(e.into());
         }
 
         if parts.next().is_some() {

@@ -199,6 +199,36 @@ LLVM version: 11.0",
 }
 
 #[test]
+fn parse_llvm_micro() {
+    let version = version_meta_for(
+        "rustc 1.51.0-nightly (4253153db 2021-01-17)
+binary: rustc
+commit-hash: 4253153db205251f72ea4493687a31e04a2a8ca0
+commit-date: 2021-01-17
+host: x86_64-pc-windows-msvc
+release: 1.51.0-nightly
+LLVM version: 11.0.1",
+    )
+    .unwrap();
+
+    assert_eq!(version.semver, Version::parse("1.51.0-nightly").unwrap());
+    assert_eq!(
+        version.commit_hash.as_deref(),
+        Some("4253153db205251f72ea4493687a31e04a2a8ca0")
+    );
+    assert_eq!(version.commit_date.as_deref(), Some("2021-01-17"));
+    assert_eq!(version.host, "x86_64-pc-windows-msvc");
+    assert_eq!(version.short_version_string, "rustc 1.51.0-nightly (4253153db 2021-01-17)");
+    assert_eq!(
+        version.llvm_version,
+        Some(LlvmVersion {
+            major: 11,
+            minor: 0
+        })
+    );
+}
+
+#[test]
 fn parse_debian_buster() {
     let version = version_meta_for(
         "rustc 1.41.1
@@ -292,16 +322,6 @@ fn parse_llvm_version_leading_zero_on_nonzero() {
     let res: Result<LlvmVersion, _> = "01".parse();
     assert!(match res {
         Err(LlvmVersionParseError::ComponentMustNotHaveLeadingZeros) => true,
-        _ => false,
-    });
-}
-
-#[test]
-fn parse_llvm_version_3_components() {
-    let res: Result<LlvmVersion, _> = "4.0.0".parse();
-
-    assert!(match res {
-        Err(LlvmVersionParseError::TooManyComponents) => true,
         _ => false,
     });
 }
