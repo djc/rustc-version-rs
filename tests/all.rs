@@ -213,10 +213,10 @@ LLVM version: 11.0.1",
 
     assert_eq!(version.semver, Version::parse("1.51.0-nightly").unwrap());
     assert_eq!(
-        version.commit_hash.as_deref(),
-        Some("4253153db205251f72ea4493687a31e04a2a8ca0")
+        version.commit_hash.unwrap(),
+        "4253153db205251f72ea4493687a31e04a2a8ca0"
     );
-    assert_eq!(version.commit_date.as_deref(), Some("2021-01-17"));
+    assert_eq!(version.commit_date.unwrap(), "2021-01-17");
     assert_eq!(version.host, "x86_64-pc-windows-msvc");
     assert_eq!(
         version.short_version_string,
