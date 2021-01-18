@@ -367,16 +367,6 @@ fn parse_llvm_version_3() {
 }
 
 #[test]
-fn parse_llvm_version_4_1() {
-    let res: Result<LlvmVersion, _> = "4.1".parse();
-
-    assert!(match res {
-        Err(LlvmVersionParseError::MinorVersionMustBeZeroAfter4) => true,
-        _ => false,
-    });
-}
-
-#[test]
 fn parse_llvm_version_5() {
     let v: LlvmVersion = "5".parse().unwrap();
     assert_eq!(v, LlvmVersion { major: 5, minor: 0 });

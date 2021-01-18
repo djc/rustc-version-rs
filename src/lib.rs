@@ -127,10 +127,6 @@ impl FromStr for LlvmVersion {
 
         if let Some(part) = parts.next() {
             minor = part?;
-            if major >= 4 && minor != 0 {
-                // only LLVM versions earlier than 4.0 can have non-zero minor versions
-                return Err(LlvmVersionParseError::MinorVersionMustBeZeroAfter4);
-            }
         } else if major < 4 {
             // LLVM versions earlier than 4.0 have significant minor versions, so require the minor version in this case.
             return Err(LlvmVersionParseError::MinorVersionRequiredBefore4);
