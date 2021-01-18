@@ -133,7 +133,7 @@ impl FromStr for LlvmVersion {
         }
 
         if let Some(Err(e)) = parts.next() {
-            return Err(e.into());
+            return Err(e);
         }
 
         if parts.next().is_some() {
