@@ -218,7 +218,10 @@ LLVM version: 11.0.1",
     );
     assert_eq!(version.commit_date.as_deref(), Some("2021-01-17"));
     assert_eq!(version.host, "x86_64-pc-windows-msvc");
-    assert_eq!(version.short_version_string, "rustc 1.51.0-nightly (4253153db 2021-01-17)");
+    assert_eq!(
+        version.short_version_string,
+        "rustc 1.51.0-nightly (4253153db 2021-01-17)"
+    );
     assert_eq!(
         version.llvm_version,
         Some(LlvmVersion {
