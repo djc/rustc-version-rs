@@ -61,7 +61,6 @@ use std::process::Command;
 use std::{env, error, fmt, io, num, str};
 use std::{ffi::OsString, str::FromStr};
 
-use semver::{self, Identifier};
 // Convenience re-export to allow version comparison without needing to add
 // semver crate.
 pub use semver::Version;
@@ -231,12 +230,12 @@ pub fn version_meta_for(verbose_version_string: &str) -> Result<VersionMeta> {
     let release = expect_key("release", &map)?;
     let semver: Version = release.parse()?;
 
-    let channel = match semver.pre.first() {
-        None => Channel::Stable,
-        Some(Identifier::AlphaNumeric(s)) if s == "dev" => Channel::Dev,
-        Some(Identifier::AlphaNumeric(s)) if s == "beta" => Channel::Beta,
-        Some(Identifier::AlphaNumeric(s)) if s == "nightly" => Channel::Nightly,
-        Some(x) => return Err(Error::UnknownPreReleaseTag(x.clone())),
+    let channel = match semver.pre.split('.').next().unwrap() {
+        "" => Channel::Stable,
+        "dev" => Channel::Dev,
+        "beta" => Channel::Beta,
+        "nightly" => Channel::Nightly,
+        x => return Err(Error::UnknownPreReleaseTag(x.to_owned())),
     };
 
     let commit_hash = expect_key_or_unknown("commit-hash", &map)?;
@@ -353,12 +352,10 @@ pub enum Error {
     Utf8Error(str::Utf8Error),
     /// The output of `rustc -vV` was not in the expected format.
     UnexpectedVersionFormat,
-    /// An error occurred in parsing a `VersionReq`.
-    ReqParseError(semver::ReqParseError),
     /// An error occurred in parsing the semver.
-    SemVerError(semver::SemVerError),
+    SemVerError(semver::Error),
     /// The pre-release tag is unknown.
-    UnknownPreReleaseTag(Identifier),
+    UnknownPreReleaseTag(String),
     /// An error occurred in parsing a `LlvmVersion`.
     LlvmVersionError(LlvmVersionParseError),
 }
@@ -377,7 +374,6 @@ impl fmt::Display for Error {
             ),
             Utf8Error(_) => write!(f, "invalid UTF-8 output from `rustc -vV`"),
             UnexpectedVersionFormat => write!(f, "unexpected `rustc -vV` format"),
-            ReqParseError(ref e) => write!(f, "error parsing version requirement: {}", e),
             SemVerError(ref e) => write!(f, "error parsing version: {}", e),
             UnknownPreReleaseTag(ref i) => write!(f, "unknown pre-release tag: {}", i),
             LlvmVersionError(ref e) => write!(f, "error parsing LLVM's version: {}", e),
@@ -392,7 +388,6 @@ impl error::Error for Error {
             CommandError { .. } => None,
             Utf8Error(ref e) => Some(e),
             UnexpectedVersionFormat => None,
-            ReqParseError(ref e) => Some(e),
             SemVerError(ref e) => Some(e),
             UnknownPreReleaseTag(_) => None,
             LlvmVersionError(ref e) => Some(e),
@@ -414,8 +409,7 @@ macro_rules! impl_from {
 
 impl_from! {
     str::Utf8Error => Utf8Error,
-    semver::SemVerError => SemVerError,
-    semver::ReqParseError => ReqParseError,
+    semver::Error => SemVerError,
     LlvmVersionParseError => LlvmVersionError,
 }
 
